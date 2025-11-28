@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive EEG Frequency Analyzer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styling for input ranges */
+        input[type='range'] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 5px;
+        }
+        input[type='range']::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s;
+        }
+        input[type='range']::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s;
+        }
+        /* Specific colors for thumbs (JavaScript will set the background dynamically) */
+        .slider-delta::-webkit-slider-thumb { background: #ef4444; } /* Red-500 */
+        .slider-theta::-webkit-slider-thumb { background: #f97316; } /* Orange-500 */
+        .slider-alpha::-webkit-slider-thumb { background: #f59e0b; } /* Amber-500 */
+        .slider-beta::-webkit-slider-thumb { background: #10b981; } /* Emerald-500 */
+        .slider-gamma::-webkit-slider-thumb { background: #0ea5e9; } /* Sky-500 */
+        .slider-delta::-moz-range-thumb { background: #ef4444; }
+        .slider-theta::-moz-range-thumb { background: #f97316; }
+        .slider-alpha::-moz-range-thumb { background: #f59e0b; }
+        .slider-beta::-moz-range-thumb { background: #10b981; }
+        .slider-gamma::-moz-range-thumb { background: #0ea5e9; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <div class="p-4 md:p-8 max-w-5xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-gray-800 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 mr-3"><path d="M12 2a22 22 0 0 0 0 20c-5.5-2-10-8-10-10Z"/><path d="M12 2a22 22 0 0 1 0 20c5.5-2 10-8 10-10Z"/></svg>
+                EEG Frequency Simulator (Pure JS)
+            </h1>
+            <p class="text-xl text-gray-500 mt-2">Visualize the combined effect of brain wave power.</p>
+        </header>
+
+        <!-- Main Content Card -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl border-4 border-indigo-200/50 space-y-8">
+
+            <!-- Simulator Instructions -->
+            <div class="border-b pb-4">
+                <h2 class="text-2xl font-bold mb-2 text-indigo-700 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="4" x2="20" y1="5" y2="5"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="19" y2="19"/></svg>
+                    Adjust Band Power
+                </h2>
+                <p class="text-gray-600">Drag the sliders to increase the 'Power' (amplitude) of specific brain wave bands. Observe the resulting combined waveform and its spectrum.</p>
+            </div>
+
+            <!-- Sliders Container -->
+            <div id="sliders-container" class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Sliders will be inserted here by JavaScript -->
+            </div>
+
+            <!-- Visualizations -->
+            <div class="space-y-6 pt-4 border-t">
+
+                <!-- Time Domain Signal -->
+                <div class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-300">
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2 text-indigo-600"><path d="M2 12s3-4 8-4 5 4 8 4 3-4 8-4 5 4 8 4"/></svg>
+                        Time Domain Signal
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-2">The synthetic raw EEG signal (Amplitude vs. Time).</p>
+                    <div class="bg-white border border-gray-400 rounded-lg overflow-hidden">
+                        <canvas id="timeCanvas" height="150" width="1000"></canvas>
+                    </div>
+                </div>
+
+                <!-- Frequency Spectrum -->
+                <div class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-300">
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2 text-indigo-600"><path d="M2 12s3-4 8-4 5 4 8 4 3-4 8-4 5 4 8 4"/></svg>
+                        Frequency Spectrum
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-2">The power distribution across frequency bands (Power vs. Frequency).</p>
+                    <div class="bg-white border border-gray-400 rounded-lg overflow-hidden">
+                        <canvas id="freqCanvas" height="200" width="1000"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Educational Content -->
+        <div class="mt-10 p-6 bg-gray-100 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">EEG Bands: States of Consciousness</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div class="p-3 bg-white rounded-lg border border-red-200">
+                    <p class="font-bold text-red-600">Delta (0.5 – 4 Hz)</p>
+                    <p class="text-gray-600">Deep, dreamless sleep (NREM). High amplitude, slow waves.</p>
+                </div>
+                <div class="p-3 bg-white rounded-lg border border-orange-200">
+                    <p class="font-bold text-orange-600">Theta (4 – 8 Hz)</p>
+                    <p class="text-gray-600">Drowsiness, meditation, memory retrieval. Associated with creativity.</p>
+                </div>
+                <div class="p-3 bg-white rounded-lg border border-amber-200">
+                    <p class="font-bold text-amber-600">Alpha (8 – 13 Hz)</p>
+                    <p class="text-gray-600">Relaxed wakefulness, eyes closed. The brain's 'idling' state.</p>
+                </div>
+                <div class="p-3 bg-white rounded-lg border border-emerald-200">
+                    <p class="font-bold text-emerald-600">Beta (13 – 30 Hz)</p>
+                    <p class="text-gray-600">Active concentration, alertness, and complex thinking.</p>
+                </div>
+                <div class="p-3 bg-white rounded-lg border border-sky-200">
+                    <p class="font-bold text-sky-600">Gamma (30+ Hz)</p>
+                    <p class="text-gray-600">High-level cognitive processing and sensory integration.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Initial power settings
+        let powers = {
+            delta: 0.5,
+            theta: 1.0,
+            alpha: 2.0,
+            beta: 1.0,
+            gamma: 0.5,
+        };
+
+        const bandInfo = [
+            { name: 'Delta', key: 'delta', freq: 2.5, colorClass: 'text-red-600', unit: '0.5-4 Hz', thumbColor: '#ef4444' },
+            { name: 'Theta', key: 'theta', freq: 6.0, colorClass: 'text-orange-600', unit: '4-8 Hz', thumbColor: '#f97316' },
+            { name: 'Alpha', key: 'alpha', freq: 10.0, colorClass: 'text-amber-600', unit: '8-13 Hz', thumbColor: '#f59e0b' },
+            { name: 'Beta', key: 'beta', freq: 20.0, colorClass: 'text-emerald-600', unit: '13-30 Hz', thumbColor: '#10b981' },
+            { name: 'Gamma', key: 'gamma', freq: 40.0, colorClass: 'text-sky-600', unit: '30+ Hz', thumbColor: '#0ea5e9' },
+        ];
+
+        // --- Core Simulation and Drawing Logic ---
+
+        const generateSyntheticEEG = (p) => {
+            const sampleRate = 256;
+            const duration = 2;
+            const numSamples = sampleRate * duration;
+            const signal = new Array(numSamples).fill(0);
+
+            for (let t = 0; t < numSamples; t++) {
+                const time = t / sampleRate;
+                signal[t] = (
+                    p.delta * Math.sin(2 * Math.PI * bandInfo[0].freq * time) +
+                    p.theta * Math.sin(2 * Math.PI * bandInfo[1].freq * time) +
+                    p.alpha * Math.sin(2 * Math.PI * bandInfo[2].freq * time) +
+                    p.beta * Math.sin(2 * Math.PI * bandInfo[3].freq * time) +
+                    p.gamma * Math.sin(2 * Math.PI * bandInfo[4].freq * time)
+                );
+            }
+            return signal;
+        };
+
+        const drawTimeDomain = (canvas, signal) => {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const maxVal = Math.max(...signal.map(Math.abs), 1);
+
+            // Draw zero line
+            ctx.strokeStyle = '#d1d5db'; // Gray-300
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2);
+            ctx.lineTo(width, height / 2);
+            ctx.stroke();
+
+            // Draw signal
+            ctx.beginPath();
+            ctx.strokeStyle = '#4f46e5'; // Indigo-600
+            ctx.lineWidth = 2;
+
+            const numPoints = signal.length;
+            for (let i = 0; i < numPoints; i++) {
+                const x = (i / (numPoints - 1)) * width;
+                const y = height / 2 - (signal[i] / maxVal) * (height * 0.45);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            ctx.fillStyle = '#4b5563';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('Time (2s)', width - 10, height - 5);
+        };
+
+        const drawFrequencySpectrum = (canvas, p) => {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const bands = bandInfo.map(info => ({
+                name: info.name,
+                freq: info.freq,
+                power: p[info.key],
+                color: info.thumbColor
+            }));
+
+            const maxPower = Math.max(...bands.map(b => b.power), 1);
+            const maxFreq = 50;
+
+            // Draw axes
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            ctx.lineTo(width, height); // X-axis
+            ctx.moveTo(1, 0);
+            ctx.lineTo(1, height); // Y-axis
+            ctx.stroke();
+
+            ctx.font = '12px sans-serif';
+
+            bands.forEach(band => {
+                const xPos = (band.freq / maxFreq) * width;
+                const barHeight = (band.power / maxPower) * (height * 0.85);
+                const barWidth = 12;
+
+                // Draw bar
+                ctx.fillStyle = band.color;
+                ctx.fillRect(xPos - barWidth / 2, height - barHeight, barWidth, barHeight);
+
+                // Draw labels
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#1f2937';
+                ctx.fillText(band.name, xPos, height - 5); // Band name
+                ctx.fillStyle = '#4b5563';
+                ctx.fillText(`${band.freq} Hz`, xPos, height - barHeight - 10); // Freq label
+            });
+            
+            // Axis labels
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#1f2937';
+            ctx.fillText('50 Hz', width - 5, height - 5);
+        };
+        
+        // --- UI Initialization and Update ---
+
+        const updateVisualizations = () => {
+            const timeCanvas = document.getElementById('timeCanvas');
+            const freqCanvas = document.getElementById('freqCanvas');
+            
+            // Set canvas width based on parent element for responsiveness
+            const parentWidth = timeCanvas.parentElement.clientWidth;
+            timeCanvas.width = parentWidth;
+            freqCanvas.width = parentWidth;
+
+            const signal = generateSyntheticEEG(powers);
+            drawTimeDomain(timeCanvas, signal);
+            drawFrequencySpectrum(freqCanvas, powers);
+        };
+
+        const createSliderElement = (info) => {
+            const container = document.createElement('div');
+            container.className = 'flex flex-col space-y-1 p-3 bg-white shadow-lg rounded-xl border-t-4 ' + info.colorClass.replace('text', 'border');
+            
+            const header = document.createElement('div');
+            header.className = 'flex justify-between items-center';
+            header.innerHTML = `
+                <label class="text-md font-bold ${info.colorClass}">${info.name}</label>
+                <span id="${info.key}-value" class="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">${powers[info.key].toFixed(1)} Pwr</span>
+            `;
+            
+            const unitP = document.createElement('p');
+            unitP.className = 'text-xs font-medium text-gray-500';
+            unitP.textContent = info.unit;
+
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = 0;
+            input.max = 5;
+            input.step = 0.1;
+            input.value = powers[info.key];
+            input.className = 'slider-' + info.key;
+
+            input.oninput = (e) => {
+                powers[info.key] = parseFloat(e.target.value);
+                document.getElementById(`${info.key}-value`).textContent = `${powers[info.key].toFixed(1)} Pwr`;
+                updateVisualizations();
+            };
+
+            container.appendChild(header);
+            container.appendChild(unitP);
+            container.appendChild(input);
+            return container;
+        };
+
+        const initializeApp = () => {
+            const slidersContainer = document.getElementById('sliders-container');
+            bandInfo.forEach(info => {
+                slidersContainer.appendChild(createSliderElement(info));
+            });
+
+            // Initial draw and handle resize
+            const handleResize = () => updateVisualizations();
+            window.addEventListener('resize', handleResize);
+
+            // Initial call to draw
+            updateVisualizations();
+        };
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
